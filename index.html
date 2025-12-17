@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <title>HF 文生图测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 720px;
+            margin: 40px auto;
+        }
+        input, textarea, button {
+            width: 100%;
+            margin-top: 10px;
+            padding: 8px;
+            font-size: 16px;
+        }
+        img {
+            margin-top: 20px;
+            max-width: 100%;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+
+<h2>🧪 Hugging Face 文本 → 图片 测试</h2>
+
+<label>Hugging Face Token</label>
+<input id="token" type="password" placeholder="hf_xxxxxxxxxx" />
+
+<label>提示词（Prompt）</label>
+<textarea id="prompt" rows="4" placeholder="A cyberpunk city at night"></textarea>
+
+<button onclick="generate()">生成图片</button>
+
+<div id="status"></div>
+<img id="result" />
+
+<script>
+    async function generate() {
+        const token = document.getElementById("token").value.trim();
+        const prompt = document.getElementById("prompt").value.trim();
+        const status = document.getElementById("status");
+        const img = document.getElementById("result");
+
+        if (!token || !prompt) {
+            alert("请填写 Token 和 Prompt");
+            return;
+        }
+
+        status.innerText = "⏳ 生成中，请稍候...";
+        img.src = "";
+
+        try {
+            const res = await fetch("/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ token, prompt })
+            });
+
+            if (!res.ok) {
+                throw new Error("生成失败");
+            }
+
+            const blob = await res.blob();
+            img.src = URL.createObjectURL(blob);
+            status.innerText = "✅ 生成完成";
+        } catch (e) {
+            status.innerText = "❌ 出错：" + e.message;
+        }
+    }
+</script>
+
+</body>
+</html>
