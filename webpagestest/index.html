@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 创意画板</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            color: #333;
+        }
+        h1 { margin-bottom: 20px; }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        input {
+            width: 80%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 16px;
+            outline: none;
+        }
+        input:focus { border-color: #007bff; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+
+        #result-area { margin-top: 20px; min-height: 200px; display: flex; align-items: center; justify-content: center; }
+        img { max-width: 100%; border-radius: 8px; animation: fadeIn 0.5s; }
+        .error { color: red; font-size: 14px; margin-top: 10px; }
+
+        /* 简单的加载动画 */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>🎨 AI 文字生图</h1>
+    <p style="color: #666; margin-bottom: 20px;">请输入英文描述词（推荐）</p>
+
+    <input type="text" id="promptInput" placeholder="例如: A cute cat sitting on a cloud" />
+    <br>
+    <button id="generateBtn" onclick="generateImage()">开始生成</button>
+
+    <div id="result-area">
+        <div class="loader" id="loader"></div>
+    </div>
+    <p id="errorMsg" class="error"></p>
+</div>
+
+<script>
+    async function generateImage() {
+        const promptInput = document.getElementById('promptInput');
+        const btn = document.getElementById('generateBtn');
+        const resultArea = document.getElementById('result-area');
+        const loader = document.getElementById('loader');
+        const errorMsg = document.getElementById('errorMsg');
+
+        const prompt = promptInput.value.trim();
+        if (!prompt) return alert("请先输入描述词！");
+
+        // 重置状态
+        btn.disabled = true;
+        btn.innerText = "生成中...";
+        errorMsg.innerText = "";
+        loader.style.display = "block";
+        // 移除旧图片（保留 loader）
+        const oldImg = resultArea.querySelector('img');
+        if (oldImg) oldImg.remove();
+
+        try {
+            // 请求我们自己的后端 (Cloudflare Functions)
+            const response = await fetch('/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: prompt })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || '生成失败');
+            }
+
+            // 获取图片二进制流
+            const blob = await response.blob();
+            const imgUrl = URL.createObjectURL(blob);
+
+            // 显示图片
+            const img = document.createElement('img');
+            img.src = imgUrl;
+            resultArea.appendChild(img);
+
+        } catch (error) {
+            console.error(error);
+            errorMsg.innerText = "出错了: " + error.message;
+        } finally {
+            // 恢复状态
+            btn.disabled = false;
+            btn.innerText = "开始生成";
+            loader.style.display = "none";
+        }
+    }
+</script>
+</body>
+</html>
